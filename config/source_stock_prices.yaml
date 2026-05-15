@@ -1,0 +1,48 @@
+source_name: stock_prices
+source_type: api
+api_provider: yfinance
+business_domain: financial_market_data
+
+tickers:
+  - AAPL
+  - MSFT
+  - NVDA
+  - TSLA
+  - AMZN
+
+lookback_period: 1y
+interval: 1d
+
+landing_path: data/raw/stock_prices/
+bronze_table: bronze.stock_prices
+silver_table: silver.stock_prices_cleaned
+gold_table: gold.daily_stock_signals
+
+load_type: batch
+ingestion_frequency: daily
+
+primary_key:
+  - ticker
+  - trade_date
+
+expected_columns:
+  - ticker
+  - trade_date
+  - open_price
+  - high_price
+  - low_price
+  - close_price
+  - adjusted_close_price
+  - volume
+
+data_quality_rules:
+  - column: ticker
+    rule: not_null
+  - column: trade_date
+    rule: not_null
+  - column: close_price
+    rule: greater_than
+    value: 0
+  - column: volume
+    rule: greater_than_or_equal
+    value: 0
