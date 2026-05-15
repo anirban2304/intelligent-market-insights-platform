@@ -1,0 +1,66 @@
+# Databricks notebook source
+# MAGIC %md
+# MAGIC # Stock Prices Ingestion - Bronze Layer
+
+# COMMAND ----------
+
+# Step 1: Imports
+import yaml
+import os
+
+# COMMAND ----------
+
+# Step 2: Load config
+config_path = "config/source_stock_prices.yaml"
+
+with open(config_path, "r") as file:
+    config = yaml.safe_load(file)
+
+# COMMAND ----------
+
+# Step 3: Extract parameters from config
+tickers = config["tickers"]
+lookback_period = config["lookback_period"]
+interval = config["interval"]
+landing_path = config["landing_path"]
+bronze_table = config["bronze_table"]
+
+# COMMAND ----------
+
+# Step 4: Fetch data (to be implemented)
+def fetch_stock_data(tickers, period, interval):
+    """
+    Fetch stock data from API (yfinance).
+    """
+    pass
+
+# COMMAND ----------
+
+# Step 5: Transform data (to be implemented)
+def transform_data(raw_df):
+    """
+    Standardize column names and schema.
+    """
+    pass
+
+# COMMAND ----------
+
+# Step 6: Load to Bronze (to be implemented)
+def load_to_bronze(df, table_name):
+    """
+    Write data to Delta Bronze table.
+    """
+    pass
+
+# COMMAND ----------
+
+# Step 7: Orchestration (main flow)
+def run_pipeline():
+    raw_data = fetch_stock_data(tickers, lookback_period, interval)
+    transformed_data = transform_data(raw_data)
+    load_to_bronze(transformed_data, bronze_table)
+
+# COMMAND ----------
+
+if __name__ == "__main__":
+    run_pipeline()
