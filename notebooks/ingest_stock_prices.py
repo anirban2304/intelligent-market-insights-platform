@@ -124,6 +124,41 @@ def apply_data_quality_checks(df, config):
 
     return valid_df, failed_df
 
+def transform_to_silver(df):
+    """
+    Apply Silver-layer standardization.
+    """
+    silver_df = df.copy()
+
+    silver_df["trade_date"] = pd.to_datetime(silver_df["trade_date"]).dt.date
+    silver_df["ticker"] = silver_df["ticker"].str.upper().str.strip()
+
+    numeric_columns = [
+        "open_price",
+        "high_price",
+        "low_price",
+        "close_price",
+        "adjusted_close_price",
+        "volume"
+    ]
+
+    for column in numeric_columns:
+        silver_df[column] = pd.to_numeric(silver_df[column], errors="coerce")
+
+    silver_df = silver_df.drop_duplicates(
+        subset=["ticker", "trade_date"]
+    )
+
+    return silver_df
+
+def write_to_local_silver(df, output_path):
+    """
+    Write Silver data locally.
+    """
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    df.to_csv(output_path, index=False)
+    return output_path
+
 def create_audit_log(source_name, total_records, clean_records, failed_records):
     """
     Create audit log for pipeline execution
@@ -138,6 +173,40 @@ def create_audit_log(source_name, total_records, clean_records, failed_records):
     }
 
     return audit
+
+def transform_to_gold(df):
+    """
+    Create analytical features for stock signals.
+    """
+    gold_df = df.copy()
+
+    gold_df = gold_df.sort_values(by=["ticker", "trade_date"])
+
+    # Daily return
+    gold_df["daily_return"] = (
+        gold_df.groupby("ticker")["close_price"].pct_change()
+    )
+
+    # Price change
+    gold_df["price_change"] = (
+        gold_df["close_price"] - gold_df["open_price"]
+    )
+
+    # 7-day moving average
+    gold_df["ma_7"] = (
+        gold_df.groupby("ticker")["close_price"]
+        .transform(lambda x: x.rolling(window=7).mean())
+    )
+
+    return gold_df
+
+def write_to_local_gold(df, output_path):
+    """
+    Write Gold data locally.
+    """
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    df.to_csv(output_path, index=False)
+    return output_path
 
 # COMMAND ----------
 
@@ -185,4 +254,21 @@ if __name__ == "__main__":
     config["landing_path"]
 )
 
-print("BRONZE FILE WRITTEN:", output_file)
+    print("BRONZE FILE WRITTEN:", output_file)
+    silver_data = transform_to_silver(clean_data)
+
+    silver_file = write_to_local_silver(
+        silver_data,
+        config["silver_local_path"]
+    )
+
+    print("SILVER FILE WRITTEN:", silver_file)
+    gold_data = transform_to_gold(silver_data)
+
+    gold_file = write_to_local_gold(
+        gold_data,
+        config["gold_local_path"]
+    )
+
+    print("GOLD FILE WRITTEN:", gold_file)
+

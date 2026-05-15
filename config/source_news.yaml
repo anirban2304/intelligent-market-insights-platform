@@ -4,6 +4,7 @@ file_format: csv
 business_domain: financial_market_data
 
 landing_path: data/sample/news/
+silver_local_path: data/silver/news/news_silver.csv
 
 bronze_table: bronze.news
 silver_table: silver.news_cleaned
