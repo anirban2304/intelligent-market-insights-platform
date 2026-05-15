@@ -31,17 +31,13 @@ bronze_table = config["bronze_table"]
 
 # Step 4: Fetch data
 def fetch_stock_data(tickers, period, interval):
-    """
-    Fetch stock data from yfinance.
-    """
     all_data = []
 
     for ticker in tickers:
-        ticker_df = yf.download(
-            ticker,
-            period=period,
+        ticker_df = yf.Ticker(ticker).history(
+            period=lookback_period,
             interval=interval,
-            progress=False
+            auto_adjust=False
         )
 
         ticker_df = ticker_df.reset_index()
@@ -53,12 +49,79 @@ def fetch_stock_data(tickers, period, interval):
 
 # COMMAND ----------
 
-# Step 5: Transform data (to be implemented)
+# Step 5: Transform data
 def transform_data(raw_df):
     """
-    Standardize column names and schema.
+    Standardize column names and handle schema variability.
     """
-    pass
+    df = raw_df.copy()
+
+    df = df.rename(columns={
+        "Date": "trade_date",
+        "Open": "open_price",
+        "High": "high_price",
+        "Low": "low_price",
+        "Close": "close_price",
+        "Adj Close": "adjusted_close_price",
+        "Volume": "volume"
+    })
+
+    # Handle missing adjusted_close_price
+    if "adjusted_close_price" not in df.columns:
+        df["adjusted_close_price"] = df["close_price"]
+
+    expected_columns = [
+        "ticker",
+        "trade_date",
+        "open_price",
+        "high_price",
+        "low_price",
+        "close_price",
+        "adjusted_close_price",
+        "volume"
+    ]
+
+    df = df[expected_columns]
+    df["trade_date"] = pd.to_datetime(df["trade_date"])
+
+    return df
+
+
+def apply_data_quality_checks(df, config):
+    """
+    Apply data quality rules from config.
+    Returns clean_df and failed_records_df
+    """
+    rules = config.get("data_quality_rules", [])
+
+    valid_df = df.copy()
+    failed_df = pd.DataFrame()
+
+    for rule in rules:
+        column = rule["column"]
+        rule_type = rule["rule"]
+
+        if rule_type == "not_null":
+            failed = valid_df[valid_df[column].isnull()]
+            valid_df = valid_df[valid_df[column].notnull()]
+
+        elif rule_type == "greater_than":
+            threshold = rule["value"]
+            failed = valid_df[valid_df[column] <= threshold]
+            valid_df = valid_df[valid_df[column] > threshold]
+
+        elif rule_type == "greater_than_or_equal":
+            threshold = rule["value"]
+            failed = valid_df[valid_df[column] < threshold]
+            valid_df = valid_df[valid_df[column] >= threshold]
+
+        else:
+            continue
+
+        failed["failed_rule"] = f"{column}_{rule_type}"
+        failed_df = pd.concat([failed_df, failed], ignore_index=True)
+
+    return valid_df, failed_df
 
 # COMMAND ----------
 
@@ -83,6 +146,12 @@ def run_pipeline():
 #    run_pipeline()
 
 if __name__ == "__main__":
-    data = fetch_stock_data(tickers, lookback_period, interval)
-    print(data.head())
-    print(data.shape)
+    raw_data = fetch_stock_data(tickers, lookback_period, interval)
+    transformed_data = transform_data(raw_data)
+
+    clean_data, failed_data = apply_data_quality_checks(transformed_data, config)
+
+    print("CLEAN DATA:", clean_data.shape)
+    print("FAILED DATA:", failed_data.shape)
+    print("FAILED DATA SAMPLE:")
+    print(failed_data.head())
