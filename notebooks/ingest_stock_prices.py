@@ -7,6 +7,8 @@
 # Step 1: Imports
 import yaml
 import os
+import yfinance as yf
+import pandas as pd
 
 # COMMAND ----------
 
@@ -27,12 +29,27 @@ bronze_table = config["bronze_table"]
 
 # COMMAND ----------
 
-# Step 4: Fetch data (to be implemented)
+# Step 4: Fetch data
 def fetch_stock_data(tickers, period, interval):
     """
-    Fetch stock data from API (yfinance).
+    Fetch stock data from yfinance.
     """
-    pass
+    all_data = []
+
+    for ticker in tickers:
+        ticker_df = yf.download(
+            ticker,
+            period=period,
+            interval=interval,
+            progress=False
+        )
+
+        ticker_df = ticker_df.reset_index()
+        ticker_df["ticker"] = ticker
+
+        all_data.append(ticker_df)
+
+    return pd.concat(all_data, ignore_index=True)
 
 # COMMAND ----------
 
@@ -62,5 +79,10 @@ def run_pipeline():
 
 # COMMAND ----------
 
+#if __name__ == "__main__":
+#    run_pipeline()
+
 if __name__ == "__main__":
-    run_pipeline()
+    data = fetch_stock_data(tickers, lookback_period, interval)
+    print(data.head())
+    print(data.shape)
