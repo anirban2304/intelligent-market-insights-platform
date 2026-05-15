@@ -1,1 +1,1 @@
-# intelligent-market-insights-platform
+# Intelligent Market Insights Platform
