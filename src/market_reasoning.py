@@ -43,6 +43,11 @@ def run_reasoning_engine(df):
         axis=1
     )
 
+    result_df["confidence_score"] = result_df.apply(
+    calculate_confidence_score,
+    axis=1
+)
+
     return result_df
 
 def generate_recommendation(row):
@@ -61,3 +66,19 @@ def generate_recommendation(row):
 
     else:
         return "HOLD_SIGNAL"
+
+def calculate_confidence_score(row):
+    """
+    Calculate confidence score for recommendation.
+    """
+    sentiment = abs(row.get("avg_sentiment_score", 0))
+    daily_return = abs(row.get("daily_return", 0))
+    news_count = row.get("news_count", 0)
+
+    confidence = 0
+
+    confidence += min(sentiment * 30, 30)
+    confidence += min(daily_return * 1000, 40)
+    confidence += min(news_count * 10, 30)
+
+    return round(confidence, 2)
