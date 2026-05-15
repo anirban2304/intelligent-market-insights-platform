@@ -1,1 +1,28 @@
+source_name: financial_news
+source_type: file
+file_format: csv
+business_domain: financial_market_data
 
+landing_path: data/sample/news/
+
+bronze_table: bronze.news
+silver_table: silver.news_cleaned
+
+load_type: batch
+ingestion_frequency: daily
+
+expected_columns:
+  - news_id
+  - publish_date
+  - source
+  - title
+  - content
+  - ticker
+
+data_quality_rules:
+  - column: news_id
+    rule: not_null
+  - column: publish_date
+    rule: not_null
+  - column: title
+    rule: not_null
