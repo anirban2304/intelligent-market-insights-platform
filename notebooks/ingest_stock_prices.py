@@ -9,6 +9,7 @@ import yaml
 import os
 import yfinance as yf
 import pandas as pd
+from datetime import datetime
 
 # COMMAND ----------
 
@@ -123,14 +124,34 @@ def apply_data_quality_checks(df, config):
 
     return valid_df, failed_df
 
+def create_audit_log(source_name, total_records, clean_records, failed_records):
+    """
+    Create audit log for pipeline execution
+    """
+    audit = {
+        "source_name": source_name,
+        "run_timestamp": datetime.now(),
+        "total_records": total_records,
+        "clean_records": clean_records,
+        "failed_records": failed_records,
+        "status": "SUCCESS" if failed_records == 0 else "PARTIAL_SUCCESS"
+    }
+
+    return audit
+
 # COMMAND ----------
 
 # Step 6: Load to Bronze (to be implemented)
-def load_to_bronze(df, table_name):
+def write_to_local_bronze(df, output_path):
     """
-    Write data to Delta Bronze table.
+    Write clean data locally in a Bronze-like structure.
     """
-    pass
+    os.makedirs(output_path, exist_ok=True)
+
+    output_file = os.path.join(output_path, "stock_prices_bronze.csv")
+    df.to_csv(output_file, index=False)
+
+    return output_file
 
 # COMMAND ----------
 
@@ -138,7 +159,7 @@ def load_to_bronze(df, table_name):
 def run_pipeline():
     raw_data = fetch_stock_data(tickers, lookback_period, interval)
     transformed_data = transform_data(raw_data)
-    load_to_bronze(transformed_data, bronze_table)
+    #load_to_bronze(transformed_data, bronze_table)
 
 # COMMAND ----------
 
@@ -151,7 +172,17 @@ if __name__ == "__main__":
 
     clean_data, failed_data = apply_data_quality_checks(transformed_data, config)
 
-    print("CLEAN DATA:", clean_data.shape)
-    print("FAILED DATA:", failed_data.shape)
-    print("FAILED DATA SAMPLE:")
-    print(failed_data.head())
+    audit_log = create_audit_log(
+        source_name=config["source_name"],
+        total_records=len(transformed_data),
+        clean_records=len(clean_data),
+        failed_records=len(failed_data)
+    )
+
+    print("AUDIT LOG:", audit_log)
+    output_file = write_to_local_bronze(
+    clean_data,
+    config["landing_path"]
+)
+
+print("BRONZE FILE WRITTEN:", output_file)
