@@ -9,24 +9,25 @@ def generate_market_insight(row):
     daily_return = row.get("daily_return", 0)
     news_count = row.get("news_count", 0)
 
-    if daily_return > 0 and sentiment > 0:
-        return "Positive price movement supported by positive news sentiment."
+    ticker = row.get("ticker", "UNKNOWN")
 
-    elif daily_return < 0 and sentiment < 0:
-        return "Negative price movement aligned with negative news sentiment."
+    if news_count == 0:
+        return f"{ticker}: No significant news coverage. Price movement driven by market factors."
+
+    if daily_return > 0.02 and sentiment > 0:
+        return f"{ticker}: Strong upward movement backed by positive sentiment across {news_count} news articles."
+
+    elif daily_return < -0.02 and sentiment < 0:
+        return f"{ticker}: Decline aligned with negative sentiment observed in {news_count} news articles."
 
     elif daily_return > 0 and sentiment <= 0:
-        return "Price increased despite neutral or negative news sentiment."
+        return f"{ticker}: Price increased despite weak or neutral sentiment signals."
 
     elif daily_return < 0 and sentiment >= 0:
-        return "Price declined despite neutral or positive news sentiment."
-
-    elif news_count == 0:
-        return "No relevant news signal available for this stock on this date."
+        return f"{ticker}: Price dropped even though sentiment remained neutral or positive."
 
     else:
-        return "Market movement was neutral or inconclusive."
-
+        return f"{ticker}: Mixed signals with no clear directional trend."
 
 def run_reasoning_engine(df):
     """
@@ -46,7 +47,12 @@ def run_reasoning_engine(df):
     result_df["confidence_score"] = result_df.apply(
     calculate_confidence_score,
     axis=1
-)
+    )
+
+    result_df["risk_classification"] = result_df.apply(
+        classify_risk,
+        axis=1
+    )
 
     return result_df
 
@@ -82,3 +88,20 @@ def calculate_confidence_score(row):
     confidence += min(news_count * 10, 30)
 
     return round(confidence, 2)
+
+def classify_risk(row):
+    """
+    Classify risk based on volatility proxy and sentiment uncertainty.
+    """
+    daily_return = abs(row.get("daily_return", 0))
+    sentiment = abs(row.get("avg_sentiment_score", 0))
+    news_count = row.get("news_count", 0)
+
+    if daily_return > 0.04 and news_count <= 1:
+        return "HIGH_RISK"
+
+    elif daily_return > 0.02 or sentiment < 0.2:
+        return "MEDIUM_RISK"
+
+    else:
+        return "LOW_RISK"
