@@ -1,0 +1,4 @@
+news_id,publish_date,source,title,content,ticker
+1,2024-01-01,Bloomberg,Apple stock rises,Apple stock surged after strong earnings,AAPL
+2,2024-01-02,Reuters,Tesla faces pressure,Tesla stock dropped due to supply issues,TSLA
+3,2024-01-03,CNBC,Microsoft growth outlook,Microsoft expects strong cloud growth,MSFT
